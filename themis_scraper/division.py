@@ -34,8 +34,12 @@ def create_division(division):
     base = gen_division_base_xpath(division)
 
     name = session.at_xpath(gen_division_name_xpath(base)).text()
+
+    print("extracting division:", name)
+
     departments = department.create_departments(base, division)
 
+    print("finished extracting division:", name)
     return Division(name, departments)
 
 def create_divisions():

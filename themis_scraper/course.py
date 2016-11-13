@@ -1,5 +1,6 @@
 from selenium import webdriver
 import session
+import section
 
 
 def check_total():
@@ -32,45 +33,15 @@ def extract_bounds():
     result = session.at_xpath(count_xpath).text().split(' ')[-4].split('-')
     return int(result[0]), int(result[1])
 
-def format(text):
-    return text.split('\n')[-1]
-
-def find_optional_element(browser, xpath):
-    elements = browser.find_elements_by_xpath(xpath)
-    if elements:
-        return format(elements[0].text)
-    else:
-        return 'None'
-
-def course_from_page(browser):
-    title_xpath = '//*[@id="u19"]/h2/span'
-    title = browser.find_element_by_xpath(title_xpath).text.split(' ')
-    code = title[0][:-1]
-    name = ' '.join(title[1:])
-
-    division = format(browser.find_element_by_xpath('//*[@id="u23"]').text)
-    description = format(browser.find_element_by_xpath('//*[@id="u32"]').text)
-    department = format(browser.find_element_by_xpath('//*[@id="u41"]').text)
-
-    prerequisite = find_optional_element(browser, '//*[@id="u50"]')
-    corequisite = find_optional_element(browser, '//*[@id="u59"]')
-    exclusion = find_optional_element(browser, '//*[@id="u68"]')
-    preparation = find_optional_element(browser, '//*[@id="u77"]')
-
-    level = format(browser.find_element_by_xpath('//*[@id="u86"]').text)
-    term = format(browser.find_element_by_xpath('//*[@id="u158"]').text)
-
-    return Course(code, name, division, description, department, prerequisite, corequisite, exclusion, preparation, level, term)
-
 def create_course(url_end):
     """
     creates a single course object found at the url specified by url_end
     """
     url = 'http://coursefinder.utoronto.ca/course-search/search/' + url_end
-    browser = webdriver.PhantomJS("./phantomjs")
-    browser.get(url)
-    course = course_from_page(browser)
-    browser.quit()
+    name = url_end.split("/")[2][:7]
+    print("\t\textracting course:", name)
+    course = Course(url)
+    print("\t\tfinished extracting course:", name)
     return course
 
 def create_courses():
@@ -115,22 +86,55 @@ def create_courses():
 
 class Course:
 
-    def __init__(self, code, name, division, description, department, prerequisite, corequisite, exclusion, preparation, level, term):
-        self._code = code
-        self._name = name
-        self._division = division
-        self._description = description
-        self._department = department
-        self._prerequisite = prerequisite
-        self._corequisite = corequisite
-        self._exclusion = exclusion
-        self._preparation = preparation
-        self._level = level
-        self._term = term
+    def __init__(self, url):
+        browser = webdriver.PhantomJS("./phantomjs")
+        browser.get(url)
 
-        print('\n'.join([code, name, division, description, department, prerequisite, corequisite, exclusion, preparation, level, term]))
-        print('=' * 80)
+        self.set_course_data(browser)
+        self.set_sections_data(browser)
 
+        browser.quit()
+
+    @staticmethod
+    def format(text):
+        return text.split('\n')[-1]
+
+    @staticmethod
+    def find_optional_element(browser, xpath):
+        elements = browser.find_elements_by_xpath(xpath)
+        if elements:
+            return Course.format(elements[0].text)
+        else:
+            return 'None'
+
+    def set_course_data(self, browser):
+        title_xpath = '//*[@id="u19"]/h2/span'
+        title = browser.find_element_by_xpath(title_xpath).text.split(' ')
+        self._code = title[0][:-1]
+        self._name = ' '.join(title[1:])
+
+        self._division = Course.format(browser.find_element_by_xpath('//*[@id="u23"]').text)
+        self._description = Course.format(browser.find_element_by_xpath('//*[@id="u32"]').text)
+        self._department = Course.format(browser.find_element_by_xpath('//*[@id="u41"]').text)
+
+        self._prerequisite = Course.find_optional_element(browser, '//*[@id="u50"]')
+        self._corequisite = Course.find_optional_element(browser, '//*[@id="u59"]')
+        self._exclusion = Course.find_optional_element(browser, '//*[@id="u68"]')
+        self._preparation = Course.find_optional_element(browser, '//*[@id="u77"]')
+
+        self._level = Course.format(browser.find_element_by_xpath('//*[@id="u86"]').text)
+        self._term = Course.format(browser.find_element_by_xpath('//*[@id="u158"]').text)
+
+    def set_sections_data(self, browser):
+        self._sections = []
+        count = 0
+        while True:
+            sect = section.Section.create(browser, count)
+            if sect is not None:
+                self._sections.append(sect)
+                count += 1
+            else:
+                break
 
     def to_dict(self):
         return {
@@ -144,5 +148,6 @@ class Course:
             "exclusion": self._exclusion,
             "preparation": self._preparation,
             "level": self._level,
-            "term": self._term
+            "term": self._term,
+            "sections": [section.to_dict() for section in self._sections]
         }

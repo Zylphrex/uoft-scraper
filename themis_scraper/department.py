@@ -1,3 +1,4 @@
+import sys
 import time
 import session
 import course
@@ -60,6 +61,9 @@ def create_department(base, division, i):
     xpath = gen_department_xpath(base, division, i)
     node = session.at_xpath(xpath)
     name = node.text()
+
+    print("\textracting department:", name)
+
     node.click()
 
     # TODO: change to empty list later
@@ -72,9 +76,13 @@ def create_department(base, division, i):
         try:
             courses = course.create_courses()
         except IndexError:
-            pass
+            if attempts < MAX_ATTEMPTS:
+                print("failed to create courses, trying again", file=sys.stderr)
+            else:
+                print("failed to create courses, continuing", file=sys.stderr)
         attempts += 1
 
+    print("\tfinished extracting department:", name)
     # return session to home page
     session.home()
 
@@ -89,7 +97,7 @@ def create_departments(base, division):
     departments = []
 
     for i in range(_count_mapping[division]):
-    # for i in range(0, 1): # TODO revert to above
+    # for i in range(0, 3, 2): # TODO revert to above
         departments.append(create_department(base, division, i))
 
     return departments
