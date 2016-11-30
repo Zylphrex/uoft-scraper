@@ -24,7 +24,7 @@ class Section:
         # soup.find('//*[@id="u281_line' + str(count) + '"]').text
         self._current_enrolment = extract(soup, 'u290_line' + str(count))
         # soup.find('//*[@id="u290_line' + str(count) + '"]').text
-        self._option_to_waitlist = 'yes' if bool(extract(soup, 'u308_line' + str(count))) else 'no'
+        self._option_to_waitlist = 'yes' if soup.find(id='u308_line' + str(count)) else 'no'
         self._delivery_mode = extract(soup, 'u314_line' + str(count))
         # soup.find('//*[@id="u314_line' + str(count) + '"]').text
 

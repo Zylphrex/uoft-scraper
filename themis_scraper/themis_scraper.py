@@ -86,13 +86,15 @@ def gen_course_links(soup):
     links = extract_links(soup)
     course_links = []
 
-    for l in links: # TODO
+    for l in links:
+        time.sleep(.5) # reduce traffic
         dept_link = formulate_department_url(l)
         response = session.get(dept_link, cookies=homepage.cookies)
         data = json.loads(response.text.strip())['aaData']
         for course in data:
             course_link = formulate_course_url(course[1].split('/')[-2].split("'")[0])
             course_links.append(course_link)
+            print('obtained link:', course_link)
 
     return course_links
 
@@ -109,12 +111,15 @@ if __name__ == '__main__':
     course_links = gen_course_links(soup)
 
     courses = []
+    count = 0
+    total = len(course_links)
 
-    for course_link in course_links[:10]:
-        time.sleep(.5)
-        print(course_link)
+    for course_link in course_links:
+        time.sleep(.5) # reduce traffic
         course = Course(course_link)
         courses.append(course.to_dict())
+        count += 1
+        print('obtained course:', course._code + '(' + str(count) + ' of ' + str(total) + ')')
 
     file = open('data.js', 'w')
     file.write(json.dumps(courses, indent=4))
